@@ -15,9 +15,18 @@ red_channel = img[:, :, 2]
 blue_channel = img[:, :, 0]
 # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-blurred_green = cv2.medianBlur(cv2.equalizeHist(green_channel), 25) #cv2.bilateralFilter(gray,10,50,50)
-blurred_red = cv2.medianBlur(cv2.equalizeHist(red_channel), 25)
-
+blurred_green = cv2.medianBlur(green_channel, 35) #cv2.bilateralFilter(gray,10,50,50)
+blurred_red = cv2.medianBlur(red_channel, 35)
+'''
+# apply basic thresholding -- the first parameter is the image
+# we want to threshold, the second value is is our threshold
+# check; if a pixel value is greater than our threshold (in this
+# case, 200), we set it to be *black, otherwise it is *white*
+(T, threshInv) = cv2.threshold(blurred_green, 100, 200, cv2.THRESH_BINARY_INV)
+# cv2.imshow("Threshold Binary Inverse", threshInv)
+cv2.imshow('blurred_green', cv2.resize(threshInv, (1920, 1080)))
+cv2.waitKey(0)
+'''
 minDist = 120
 param1 = 30 #500
 param2 = 30 #200 #smaller value-> more false circles
