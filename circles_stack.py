@@ -17,6 +17,7 @@ blue_channel = img[:, :, 0]
 
 blurred_green = cv2.medianBlur(green_channel, 35) #cv2.bilateralFilter(gray,10,50,50)
 blurred_red = cv2.medianBlur(red_channel, 35)
+blurred_blue = cv2.medianBlur(blue_channel, 35)
 '''
 # apply basic thresholding -- the first parameter is the image
 # we want to threshold, the second value is is our threshold
@@ -33,28 +34,58 @@ param2 = 30 #200 #smaller value-> more false circles
 minRadius = 20
 maxRadius = 75 #10
 
+
+circles_prep = cv2.HoughCircles(blurred_green, cv2.HOUGH_GRADIENT, 1, minDist, param1=param1, param2=param2,
+                                minRadius=minRadius, maxRadius=maxRadius)
+circles_prep = np.uint16(np.around(circles_prep))
+avg = 0
+cnt = 0
+for i in circles_prep[0, :]:
+    avg += i[2]
+    cnt += 1
+minRadius = int(avg*0.8/cnt)
+maxRadius = int(avg*1.2/cnt)
 # docstring of HoughCircles: HoughCircles(image, method, dp, minDist[, circles[, param1[, param2[, minRadius[, maxRadius]]]]]) -> circles
 circles_green = cv2.HoughCircles(blurred_green, cv2.HOUGH_GRADIENT, 1, minDist, param1=param1, param2=param2, minRadius=minRadius, maxRadius=maxRadius)
 
 if circles_green is not None:
     circles_green = np.uint16(np.around(circles_green))
-    for i in circles_green[0, :]:
-        cv2.circle(img_green, (i[0], i[1]), i[2], (0, 255, 0), 2)
+    print(circles_green.shape)
 
-resized = cv2.resize(img_green, (1920, 1080))
-cv2.imshow('img', resized)
-cv2.waitKey(0)
-
+circles_prep = cv2.HoughCircles(blurred_red, cv2.HOUGH_GRADIENT, 1, minDist, param1=param1, param2=param2,
+                                minRadius=20, maxRadius=75)
+circles_prep = np.uint16(np.around(circles_prep))
+avg = 0
+cnt = 0
+for i in circles_prep[0, :]:
+    avg += i[2]
+    cnt += 1
+minRadius = round(avg*0.8/cnt)
+maxRadius = round(avg*1.2/cnt)
 circles_red = cv2.HoughCircles(blurred_red, cv2.HOUGH_GRADIENT, 1, minDist, param1=param1, param2=param2, minRadius=minRadius, maxRadius=maxRadius)
 
 if circles_red is not None:
     circles_red = np.uint16(np.around(circles_red))
-    for i in circles_red[0, :]:
-        cv2.circle(img_red, (i[0], i[1]), i[2], (0, 255, 0), 2)
+    print(circles_red.shape)
 
-# Show result for testing:
-resized = cv2.resize(img_red, (1920, 1080))
-cv2.imshow('img', resized)
-cv2.waitKey(0)
+circles_prep = cv2.HoughCircles(blurred_blue, cv2.HOUGH_GRADIENT, 1, minDist, param1=param1, param2=param2,
+                                minRadius=20, maxRadius=75)
+circles_prep = np.uint16(np.around(circles_prep))
+avg = 0
+cnt = 0
+for i in circles_prep[0, :]:
+    avg += i[2]
+    cnt += 1
+minRadius = int(avg*0.8/cnt)
+maxRadius = int(avg*1.2/cnt)
+circles_blue = cv2.HoughCircles(blurred_blue, cv2.HOUGH_GRADIENT, 1, minDist, param1=param1, param2=param2, minRadius=minRadius, maxRadius=maxRadius)
 
-cv2.destroyAllWindows()
+if circles_blue is not None:
+    circles_blue = np.uint16(np.around(circles_red))
+    print(circles_blue.shape)
+
+green_circles = np.sort(circles_green, axis=1)
+red_circles = np.sort(circles_red, axis=1)
+blue_circles = np.sort(circles_blue, axis=1)
+
+
