@@ -1,15 +1,24 @@
 from os import listdir
 import cv2
 import numpy as np
+from PIL import Image
+from raw_pillow_opener import register_raw_opener
+
 import pprint
 from sys import argv
 
+register_raw_opener()
 
 pp = pprint.PrettyPrinter(indent=4)
 
 images = listdir('input')
 
-img = cv2.imread('input/' + images[0])
+if images[0].endswith('dng'):
+    img = np.array(Image.open('input/' + images[0]).convert('RGB'))
+    img = img[:, :, ::-1].copy()
+else:
+    img = cv2.imread('input/' + images[0])
+
 
 green_channel = img[:, :, 1]
 red_channel = img[:, :, 2]
