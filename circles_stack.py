@@ -15,6 +15,7 @@ img_blue = img.copy()'''
 green_channel = img[:, :, 1]
 red_channel = img[:, :, 2]
 blue_channel = img[:, :, 0]
+
 # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 blurred_green = cv2.medianBlur(green_channel, 35) #cv2.bilateralFilter(gray,10,50,50)
@@ -83,13 +84,14 @@ maxRadius = int(avg*1.2/cnt)
 circles_blue = cv2.HoughCircles(blurred_blue, cv2.HOUGH_GRADIENT, 1, minDist, param1=param1, param2=param2, minRadius=minRadius, maxRadius=maxRadius)
 
 if circles_blue is not None:
-    circles_blue = np.int16(np.around(circles_red))
+    circles_blue = np.int16(np.around(circles_blue))
     print('Blue circles num:', circles_blue.shape[1])
 
 green_circles = np.sort(circles_green, axis=1)
 red_circles = np.sort(circles_red, axis=1)
 blue_circles = np.sort(circles_blue, axis=1)
-print(green_circles)
+# print(np.all(red_circles == blue_circles))
+# print(blue_circles)
 
 green_red_common = []
 rgb_out = []
@@ -108,24 +110,18 @@ print('c1 radius:', d1[2])
 for i in range(green_circles.shape[1]):
     c1 = green_circles[:, i][0]
     c2 = red_circles[:, red_index][0]
-    if red_index < 15:
-        print("c1:", c1)
     while np.any((c1[:2] - c2[:2]) > c1[2]/2):
         red_index += 1
-
         if red_index >= red_circles.shape[1]:
             break
         c2 = red_circles[:, red_index][0]
-        if red_index < 15:
-            print("c2:", c2)
-            print('c1 - c2 = ', c1[:2] - c2[:2])
     if red_index >= red_circles.shape[1]:
         break
     diff = np.abs(c1[:2] - c2[:2])
     if np.all(diff < c1[2]/2):
         green_red_common.append([[i, red_index], c1[:2] - c2[:2]])
 
-# print("green + red circles difference", green_red_common)
+# pp.pprint(green_red_common)
 
 for gr_indices, gr_diff in green_red_common:
     g = gr_indices[0]
