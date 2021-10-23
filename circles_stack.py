@@ -43,6 +43,7 @@ cv2.waitKey(0)
 cv2.imshow('Blue after filtering', cv2.resize(blurred_blue, (1920, 1080)))
 cv2.waitKey(0)'''
 
+patch_grid = (5, 5)
 minDist = 100
 param1 = 30  # 500
 param2 = 30  # 200 #smaller value-> more false circles
@@ -102,27 +103,13 @@ def nearest_neighbour(points_a, points_b):
     return tree.query(points_a)[1]
 
 
-def sorting(c):
-    return c[np.lexsort((c[:, 1], c[:, 0]))]
-
-
-def unite_circles(red, green, blue):
-    g_min_r = (green - red)[:, :2]
-    g_min_b = (green - blue)[:, :2]
-    print(g_min_r, g_min_b)
-    return np.hstack((g_min_r, np.zeros(g_min_r.shape), g_min_b))
-
-
 res1 = nearest_neighbour(circles_green[0][:, :2], circles_red[0][:, :2])
 res2 = nearest_neighbour(circles_green[0][:, :2], circles_blue[0][:, :2])
 diff1 = circles_green[0][:, :2] - circles_red[0][res1, :2]
 diff2 = circles_green[0][:, :2] - circles_blue[0][res2, :2]
-pre_map = np.hstack((circles_green[0][:, :2], diff1, np.zeros(diff1.shape), diff2)).astype(int)
+pre_map = np.hstack((circles_green[0][:, :2], -diff1, np.zeros(diff1.shape), -diff2)).astype(int)
 pre_map = pre_map[np.all(pre_map[:, 2:] < maxRadius, axis=1)]
 
-with open('pre_map_dump.txt', 'w+') as fp:
-    for e in pre_map:
-        fp.write(str(e) + "\n")
 
 for e in pre_map.tolist():
     print(e, e[:2])
@@ -159,7 +146,17 @@ def get_patch(from_x, to_x, from_y, to_y, pre_map):
     return ret.tolist()
 
 
-flow_map = get_flow_map((5, 5), img.shape[:2][::-1], pre_map)
-print(flow_map)
+def save_flow_map(flow_map):
+    with open('correctingFlow.txt', 'w+') as fp:
+        fp.write(f"{patch_grid[0]},{patch_grid[1]}\n")
+        for patch in flow_map:
+            fp.write(','.join([str(x) for x in patch]) + "\n")
+
+
+flow_map = get_flow_map(patch_grid, img.shape[:2][::-1], pre_map)
+
+save_flow_map(flow_map)
+
+print("Ok! correctingFlow.txt saved!")
 
 
