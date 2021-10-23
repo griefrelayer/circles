@@ -3,11 +3,12 @@ import cv2
 import numpy as np
 from PIL import Image
 from raw_pillow_opener import register_raw_opener
+from scipy import spatial
 
 import pprint
 from sys import argv
 
-debug = True
+debug = False
 register_raw_opener()
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -96,130 +97,41 @@ if circles_blue is not None:
         print('Blue circles num:', circles_blue.shape[1])
 
 
+def nearest_neighbour(points_a, points_b):
+    tree = spatial.cKDTree(points_b)
+    return tree.query(points_a)[1]
+
+
 def sorting(c):
     return c[np.lexsort((c[:, 1], c[:, 0]))]
 
 
-green_circles = sorting(circles_green[0])
-red_circles = sorting(circles_red[0])
-blue_circles = sorting(circles_blue[0])
-if debug:
-    print(green_circles[:10])
-    print(red_circles[:10])
+def unite_circles(red, green, blue):
+    g_min_r = (green - red)[:, :2]
+    g_min_b = (green - blue)[:, :2]
+    print(g_min_r, g_min_b)
+    return np.hstack((g_min_r, np.zeros(g_min_r.shape), g_min_b))
 
-green_red_common = []
-rgb_out = []
-red_index = 0
-blue_index = 0
-i = 0
 
-while 1:
-    if red_index >= red_circles.shape[0] or i >= green_circles.shape[0]:
-        break
-    c1 = green_circles[i]
-    c2 = red_circles[red_index]
-    if debug:
-        print(c1, c2, "<= got these points")
-    diff = c1[:2] - c2[:2]
-    while diff[1] > c1[2] > abs(diff[0]):
-        red_index += 1
-        if red_index >= red_circles.shape[0] or i >= green_circles.shape[0]:
-            break
-        c2 = red_circles[red_index]
-        diff = c1[:2] - c2[:2]
-        if debug:
-            print(c1, c2, "<= inside first while")
+res1 = nearest_neighbour(circles_green[0][:, :2], circles_red[0][:, :2])
+res2 = nearest_neighbour(circles_green[0][:, :2], circles_blue[0][:, :2])
+diff1 = circles_green[0][:, :2] - circles_red[0][res1, :2]
+diff2 = circles_green[0][:, :2] - circles_blue[0][res2, :2]
+pre_map = np.hstack((circles_green[0][:, :2], diff1, np.zeros(diff1.shape), diff2)).astype(int)
 
-    while diff[1] < -c1[2] < - abs(diff[0]):
-        i += 1
-        if i >= green_circles.shape[0]:
-            break
-        c1 = green_circles[i]
-        diff = c1[:2] - c2[:2]
-        if debug:
-            print(c1, c2, "<= inside second while")
-
-    if np.all(np.abs(diff) < c1[2]):
-        if debug:
-            print("adding point...")
-        green_red_common.append([[i, red_index], c1[:2] - c2[:2]])
-        i += 1
-        red_index += 1
-    elif diff[1] > c1[2]:
-        red_index += 1
-    else:
-        i += 1
-
-if debug:
-    print(len(green_red_common))
-
-print("="*70)
-print("="*70)
-
-i = 0
-while 1:
-    if blue_index >= blue_circles.shape[0] or i >= len(green_red_common):
-        break
-    gr_indices, gr_diff = green_red_common[i]
-    g = gr_indices[0]
-    c1 = green_circles[g]
-    c2 = blue_circles[blue_index]
-    if debug:
-        print(c1, c2, "<= got these points")
-    diff = c1[:2] - c2[:2]
-    while diff[1] > c1[2] > abs(diff[0]):
-        if debug:
-            print(c1, c2, "<= inside first while (blue)")
-        blue_index += 1
-        if blue_index >= blue_circles.shape[0]:
-            break
-        c2 = blue_circles[blue_index]
-        diff = c1[:2] - c2[:2]
-    while diff[1] < -c1[2] < - abs(diff[0]):
-        if debug:
-            print(c1, c2, "<= inside second while (blue)")
-        i += 1
-        if i >= len(green_red_common):
-            break
-        gr_indices, gr_diff = green_red_common[i]
-        g = gr_indices[0]
-        c1 = green_circles[g]
-        diff = c1[:2] - c2[:2]
-    if np.all(np.abs(diff) < c1[2]):
-        if debug:
-            print("adding point (blue)...")
-        rgb_out.append([c1[:2].tolist(), gr_diff.tolist(), (c1[:2] - c2[:2]).tolist()])
-        i += 1
-        blue_index += 1
-    elif diff[1] > c1[2]:
-        blue_index += 1
-    else:
-        i += 1
-    # format: [[x, y of center of the green channel circle], [x, y difference between green and red channels],
-    # [x, y difference between green and blue channels]
-
-'''for i in circles_red[0, :]:
-    cv2.circle(img, (i[0], i[1]), i[2], (255, 0, 0), 2)
-
-for i in circles_green[0, :]:
-    cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
-
-for i in circles_blue[0, :]:
-    cv2.circle(img, (i[0], i[1]), i[2], (0, 0, 255), 2)'''
-
-pre_map = np.array(rgb_out)
 with open('pre_map_dump.txt', 'w+') as fp:
     for e in pre_map:
         fp.write(str(e) + "\n")
 
 for e in pre_map.tolist():
-    cv2.circle(img, e[0], 35, (255, 0, 0), 2)
+    print(e, e[:2])
+    cv2.circle(img, e[:2], 35, (255, 0, 0), 2)
 
 cv2.imshow('All circles', cv2.resize(img, (1920, 1080)))
 cv2.waitKey(0)
 
 
-def flow_map(patch_grid, image_size, pre_map):
+def get_flow_map(patch_grid, image_size, pre_map):
     patch_num_x, patch_num_y = patch_grid
     patches = []
     for i in range(patch_num_x):
@@ -233,11 +145,11 @@ def flow_map(patch_grid, image_size, pre_map):
 
 
 def get_patch(from_x, to_x, from_y, to_y, pre_map):
-    m1 = pre_map[np.logical_and(pre_map[:, 0, 0] > from_x, pre_map[:, 0, 1] > from_y)]
-    patch_circles = m1[np.logical_and(m1[:, 0, 0] < to_x, m1[:, 0, 1] < to_y)]
+    m1 = pre_map[np.logical_and(pre_map[:, 0] > from_x, pre_map[:, 1] > from_y)]
+    patch_circles = m1[np.logical_and(m1[:, 0] < to_x, m1[:, 1] < to_y)]
     # print(patch_circles)
     if patch_circles.tolist():
-        ret = np.nanmedian(patch_circles[:, 1:, :], axis=0)
+        ret = np.nanmedian(patch_circles[:, 2:], axis=0)
     else:
         '''print(from_x, to_x, from_y, to_y)
         print(m1.shape, patch_circles.shape)'''
@@ -246,5 +158,7 @@ def get_patch(from_x, to_x, from_y, to_y, pre_map):
     return ret.tolist()
 
 
-print(flow_map((5, 5), img.shape[:2][::-1], pre_map))
+flow_map = get_flow_map((5, 5), img.shape[:2][::-1], pre_map)
+print(flow_map)
+
 
