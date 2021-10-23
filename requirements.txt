@@ -3,3 +3,4 @@ opencv-python==4.5.3.56
 Pillow==8.4.0
 raw-pillow-opener==0.1.0
 rawpy==0.16.0
+scipy==1.7.1
