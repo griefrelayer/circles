@@ -118,6 +118,7 @@ res2 = nearest_neighbour(circles_green[0][:, :2], circles_blue[0][:, :2])
 diff1 = circles_green[0][:, :2] - circles_red[0][res1, :2]
 diff2 = circles_green[0][:, :2] - circles_blue[0][res2, :2]
 pre_map = np.hstack((circles_green[0][:, :2], diff1, np.zeros(diff1.shape), diff2)).astype(int)
+pre_map = pre_map[np.all(pre_map[:, 2:] < maxRadius, axis=1)]
 
 with open('pre_map_dump.txt', 'w+') as fp:
     for e in pre_map:
